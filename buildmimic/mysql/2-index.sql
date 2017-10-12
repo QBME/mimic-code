@@ -13,7 +13,6 @@
 -- ----------------------------------------------------------------
 
 -- The below command defines the schema where all the indexes are created
-USE mimiciiiv13;
 tee 2-index.log
 
 -- -----------

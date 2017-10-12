@@ -1,12 +1,39 @@
 -- ----------------------------------------------------------------
 --
--- This is a script to add the MIMIC-III constraints for Postgres.
+-- This is a script to add the MIMIC-III constraints for MySQL.
 -- 
 -- ----------------------------------------------------------------
+-- If you are using innodb ensure that the innodb_buffer_pool_size is adequate for this operation
+-- innodb_buffer_pool_size=5120M in /etc/my.cnf
 
 -- The below command defines the schema where the data should reside
-use mimiciiiv12;
 tee 3-constraints.log
+
+-- drop foreign key if exists is not directly supported
+-- see: http://simpcode.blogspot.co.uk/2015/03/mysql-drop-foreign-key-if-exists.html
+DROP PROCEDURE IF EXISTS tmp_drop_foreign_key;
+
+DELIMITER $$
+
+CREATE PROCEDURE tmp_drop_foreign_key(IN tableName VARCHAR(64), IN constraintName VARCHAR(64))
+BEGIN
+    IF EXISTS(
+        SELECT * FROM information_schema.table_constraints
+        WHERE 
+            table_schema    = DATABASE()     AND
+            table_name      = tableName      AND
+            constraint_name = constraintName AND
+            constraint_type = 'FOREIGN KEY')
+    THEN
+        SET @query = CONCAT('ALTER TABLE ', tableName, ' DROP FOREIGN KEY ', constraintName, ';');
+        PREPARE stmt FROM @query; 
+        EXECUTE stmt; 
+        DEALLOCATE PREPARE stmt; 
+    END IF; 
+END$$
+
+DELIMITER ;
+
 
 -- Restoring the search path to its default value can be accomplished as follows:
 --  SET search_path TO "$user",public;
@@ -16,7 +43,7 @@ tee 3-constraints.log
 -- ------------
 
 -- subject_id
-ALTER TABLE ADMISSIONS DROP FOREIGN KEY admissions_fk_subject_id;
+CALL tmp_drop_foreign_key('ADMISSIONS', 'admissions_fk_subject_id');
 ALTER TABLE ADMISSIONS
 ADD CONSTRAINT admissions_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
@@ -27,14 +54,14 @@ ADD CONSTRAINT admissions_fk_subject_id
 -- ---------
 
 -- subject_id
-ALTER TABLE CALLOUT DROP FOREIGN KEY callout_fk_subject_id;
+CALL tmp_drop_foreign_key('CALLOUT', 'callout_fk_subject_id');
 ALTER TABLE CALLOUT
 ADD CONSTRAINT callout_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE CALLOUT DROP FOREIGN KEY callout_fk_hadm_id;
+CALL tmp_drop_foreign_key('CALLOUT', 'callout_fk_hadm_id');
 ALTER TABLE CALLOUT
 ADD CONSTRAINT callout_fk_hadm_id
   FOREIGN KEY (HADM_ID)
@@ -51,35 +78,35 @@ ADD CONSTRAINT callout_fk_hadm_id
 -- -------------
 
 -- subject_id
-ALTER TABLE CHARTEVENTS DROP FOREIGN KEY chartevents_fk_subject_id;
+CALL tmp_drop_foreign_key('CHARTEVENTS', 'chartevents_fk_subject_id');
 ALTER TABLE CHARTEVENTS
 ADD CONSTRAINT chartevents_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- cgid
-ALTER TABLE CHARTEVENTS DROP FOREIGN KEY chartevents_fk_cgid;
+CALL tmp_drop_foreign_key('CHARTEVENTS', 'chartevents_fk_cgid');
 ALTER TABLE CHARTEVENTS
 ADD CONSTRAINT chartevents_fk_cgid
   FOREIGN KEY (CGID)
   REFERENCES CAREGIVERS(CGID);
 
 -- hadm_id
-ALTER TABLE CHARTEVENTS DROP FOREIGN KEY chartevents_fk_hadm_id;
+CALL tmp_drop_foreign_key('CHARTEVENTS', 'chartevents_fk_hadm_id');
 ALTER TABLE CHARTEVENTS
 ADD CONSTRAINT chartevents_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- item_id
-ALTER TABLE CHARTEVENTS DROP FOREIGN KEY chartevents_fk_itemid;
+CALL tmp_drop_foreign_key('CHARTEVENTS', 'chartevents_fk_itemid');
 ALTER TABLE CHARTEVENTS
 ADD CONSTRAINT chartevents_fk_itemid
   FOREIGN KEY (ITEMID)
   REFERENCES D_ITEMS(ITEMID);
 
 -- icustay_id
-ALTER TABLE CHARTEVENTS DROP FOREIGN KEY chartevents_fk_icustay_id;
+CALL tmp_drop_foreign_key('CHARTEVENTS', 'chartevents_fk_icustay_id');
 ALTER TABLE CHARTEVENTS
 ADD CONSTRAINT chartevents_fk_icustay_id
   FOREIGN KEY (ICUSTAY_ID)
@@ -90,14 +117,14 @@ ADD CONSTRAINT chartevents_fk_icustay_id
 -- -----------
 
 -- subject_id
-ALTER TABLE CPTEVENTS DROP FOREIGN KEY cptevents_fk_subject_id;
+CALL tmp_drop_foreign_key('CPTEVENTS', 'cptevents_fk_subject_id');
 ALTER TABLE CPTEVENTS
 ADD CONSTRAINT cptevents_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE CPTEVENTS DROP FOREIGN KEY cptevents_fk_hadm_id;
+CALL tmp_drop_foreign_key('CPTEVENTS', 'cptevents_fk_hadm_id');
 ALTER TABLE CPTEVENTS
 ADD CONSTRAINT cptevents_fk_hadm_id
   FOREIGN KEY (HADM_ID)
@@ -108,35 +135,35 @@ ADD CONSTRAINT cptevents_fk_hadm_id
 -- ----------------
 
 -- subject_id
-ALTER TABLE DATETIMEEVENTS DROP FOREIGN KEY datetimeevents_fk_subject_id;
+CALL tmp_drop_foreign_key('DATETIMEEVENTS', 'datetimeevents_fk_subject_id');
 ALTER TABLE DATETIMEEVENTS
 ADD CONSTRAINT datetimeevents_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- cgid
-ALTER TABLE DATETIMEEVENTS DROP FOREIGN KEY datetimeevents_fk_cgid;
+CALL tmp_drop_foreign_key('DATETIMEEVENTS', 'datetimeevents_fk_cgid');
 ALTER TABLE DATETIMEEVENTS
 ADD CONSTRAINT datetimeevents_fk_cgid
   FOREIGN KEY (CGID)
   REFERENCES CAREGIVERS(CGID);
 
 -- hadm_id
-ALTER TABLE DATETIMEEVENTS DROP FOREIGN KEY datetimeevents_fk_hadm_id;
+CALL tmp_drop_foreign_key('DATETIMEEVENTS', 'datetimeevents_fk_hadm_id');
 ALTER TABLE DATETIMEEVENTS
 ADD CONSTRAINT datetimeevents_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- item_id
-ALTER TABLE DATETIMEEVENTS DROP FOREIGN KEY datetimeevents_fk_itemid;
+CALL tmp_drop_foreign_key('DATETIMEEVENTS', 'datetimeevents_fk_itemid');
 ALTER TABLE DATETIMEEVENTS
 ADD CONSTRAINT datetimeevents_fk_itemid
   FOREIGN KEY (ITEMID)
   REFERENCES D_ITEMS(ITEMID);
 
 -- icustay_id
-ALTER TABLE DATETIMEEVENTS DROP FOREIGN KEY datetimeevents_fk_icustay_id;
+CALL tmp_drop_foreign_key('DATETIMEEVENTS', 'datetimeevents_fk_icustay_id');
 ALTER TABLE DATETIMEEVENTS
 ADD CONSTRAINT datetimeevents_fk_icustay_id
   FOREIGN KEY (ICUSTAY_ID)
@@ -148,14 +175,14 @@ ADD CONSTRAINT datetimeevents_fk_icustay_id
 -- ---------------
 
 -- subject_id
-ALTER TABLE DIAGNOSES_ICD DROP FOREIGN KEY diagnoses_icd_fk_subject_id;
+CALL tmp_drop_foreign_key('DIAGNOSES_ICD', 'diagnoses_icd_fk_subject_id');
 ALTER TABLE DIAGNOSES_ICD
 ADD CONSTRAINT diagnoses_icd_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE DIAGNOSES_ICD DROP FOREIGN KEY diagnoses_icd_fk_hadm_id;
+CALL tmp_drop_foreign_key('DIAGNOSES_ICD', 'diagnoses_icd_fk_hadm_id');
 ALTER TABLE DIAGNOSES_ICD
 ADD CONSTRAINT diagnoses_icd_fk_hadm_id
   FOREIGN KEY (HADM_ID)
@@ -164,7 +191,7 @@ ADD CONSTRAINT diagnoses_icd_fk_hadm_id
 -- ICD9_code
 -- Cannot impose this constraint because icd9_code contains 143 codes not in c_icd_diagnoses
 -- See https://github.com/MIT-LCP/mimic-code/issues/20
--- ALTER TABLE DIAGNOSES_ICD DROP FOREIGN KEY diagnoses_icd_fk_icd9;
+-- CALL tmp_drop_foreign_key('DIAGNOSES_ICD', 'diagnoses_icd_fk_icd9');
 -- ALTER TABLE DIAGNOSES_ICD
 -- ADD CONSTRAINT diagnoses_icd_fk_icd9
 --   FOREIGN KEY (ICD9_CODE)
@@ -175,14 +202,14 @@ ADD CONSTRAINT diagnoses_icd_fk_hadm_id
 -- ------------
 
 -- subject_id
-ALTER TABLE DRGCODES DROP FOREIGN KEY drgcodes_fk_subject_id;
+CALL tmp_drop_foreign_key('DRGCODES', 'drgcodes_fk_subject_id');
 ALTER TABLE DRGCODES
 ADD CONSTRAINT drgcodes_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE DRGCODES DROP FOREIGN KEY drgcodes_fk_hadm_id;
+CALL tmp_drop_foreign_key('DRGCODES', 'drgcodes_fk_hadm_id');
 ALTER TABLE DRGCODES
 ADD CONSTRAINT drgcodes_fk_hadm_id
   FOREIGN KEY (HADM_ID)
@@ -193,14 +220,14 @@ ADD CONSTRAINT drgcodes_fk_hadm_id
 -- ---------------
 
 -- subject_id
-ALTER TABLE ICUSTAYS DROP FOREIGN KEY icustays_fk_subject_id;
+CALL tmp_drop_foreign_key('ICUSTAYS', 'icustays_fk_subject_id');
 ALTER TABLE ICUSTAYS
 ADD CONSTRAINT icustays_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE ICUSTAYS DROP FOREIGN KEY icustays_fk_hadm_id;
+CALL tmp_drop_foreign_key('ICUSTAYS', 'icustays_fk_hadm_id');
 ALTER TABLE ICUSTAYS
 ADD CONSTRAINT icustays_fk_hadm_id
   FOREIGN KEY (HADM_ID)
@@ -211,28 +238,28 @@ ADD CONSTRAINT icustays_fk_hadm_id
 -- ----------
 
 -- subject_id
-ALTER TABLE INPUTEVENTS_CV DROP FOREIGN KEY inputevents_cv_fk_subject_id;
+CALL tmp_drop_foreign_key('INPUTEVENTS_CV', 'inputevents_cv_fk_subject_id');
 ALTER TABLE INPUTEVENTS_CV
 ADD CONSTRAINT inputevents_cv_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE INPUTEVENTS_CV DROP FOREIGN KEY inputevents_cv_fk_hadm_id;
+CALL tmp_drop_foreign_key('INPUTEVENTS_CV', 'inputevents_cv_fk_hadm_id');
 ALTER TABLE INPUTEVENTS_CV
 ADD CONSTRAINT inputevents_cv_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- icustay_id
-ALTER TABLE INPUTEVENTS_CV DROP FOREIGN KEY inputevents_cv_fk_icustay_id;
+CALL tmp_drop_foreign_key('INPUTEVENTS_CV', 'inputevents_cv_fk_icustay_id');
 ALTER TABLE INPUTEVENTS_CV
 ADD CONSTRAINT inputevents_cv_fk_icustay_id
   FOREIGN KEY (ICUSTAY_ID)
   REFERENCES ICUSTAYS(ICUSTAY_ID);
 
 -- cgid
-ALTER TABLE INPUTEVENTS_CV DROP FOREIGN KEY inputevents_cv_fk_cgid;
+CALL tmp_drop_foreign_key('INPUTEVENTS_CV', 'inputevents_cv_fk_cgid');
 ALTER TABLE INPUTEVENTS_CV
 ADD CONSTRAINT inputevents_cv_fk_cgid
   FOREIGN KEY (CGID)
@@ -243,28 +270,28 @@ ADD CONSTRAINT inputevents_cv_fk_cgid
 -- ----------
 
 -- subject_id
-ALTER TABLE INPUTEVENTS_MV DROP FOREIGN KEY inputevents_mv_fk_subject_id;
+CALL tmp_drop_foreign_key('INPUTEVENTS_MV', 'inputevents_mv_fk_subject_id');
 ALTER TABLE INPUTEVENTS_MV
 ADD CONSTRAINT inputevents_mv_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE INPUTEVENTS_MV DROP FOREIGN KEY inputevents_mv_fk_hadm_id;
+CALL tmp_drop_foreign_key('INPUTEVENTS_MV', 'inputevents_mv_fk_hadm_id');
 ALTER TABLE INPUTEVENTS_MV
 ADD CONSTRAINT inputevents_mv_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- icustay_id
-ALTER TABLE INPUTEVENTS_MV DROP FOREIGN KEY inputevents_mv_fk_icustay_id;
+CALL tmp_drop_foreign_key('INPUTEVENTS_MV', 'inputevents_mv_fk_icustay_id');
 ALTER TABLE INPUTEVENTS_MV
 ADD CONSTRAINT inputevents_mv_fk_icustay_id
   FOREIGN KEY (ICUSTAY_ID)
   REFERENCES ICUSTAYS(ICUSTAY_ID);
 
 -- cgid
-ALTER TABLE INPUTEVENTS_MV DROP FOREIGN KEY inputevents_mv_fk_cgid;
+CALL tmp_drop_foreign_key('INPUTEVENTS_MV', 'inputevents_mv_fk_cgid');
 ALTER TABLE INPUTEVENTS_MV
 ADD CONSTRAINT inputevents_mv_fk_cgid
   FOREIGN KEY (CGID)
@@ -275,21 +302,21 @@ ADD CONSTRAINT inputevents_mv_fk_cgid
 -- -----------
 
 -- subject_id
-ALTER TABLE LABEVENTS DROP FOREIGN KEY labevents_fk_subject_id;
+CALL tmp_drop_foreign_key('LABEVENTS', 'labevents_fk_subject_id');
 ALTER TABLE LABEVENTS
 ADD CONSTRAINT labevents_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE LABEVENTS DROP FOREIGN KEY labevents_fk_hadm_id;
+CALL tmp_drop_foreign_key('LABEVENTS', 'labevents_fk_hadm_id');
 ALTER TABLE LABEVENTS
 ADD CONSTRAINT labevents_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- item_id
-ALTER TABLE LABEVENTS DROP FOREIGN KEY labevents_fk_itemid;
+CALL tmp_drop_foreign_key('LABEVENTS', 'labevents_fk_itemid');
 ALTER TABLE LABEVENTS
 ADD CONSTRAINT labevents_fk_itemid
   FOREIGN KEY (ITEMID)
@@ -300,14 +327,14 @@ ADD CONSTRAINT labevents_fk_itemid
 -- --------------------
 
 -- subject_id
-ALTER TABLE MICROBIOLOGYEVENTS DROP FOREIGN KEY microbiologyevents_fk_subject_id;
+CALL tmp_drop_foreign_key('MICROBIOLOGYEVENTS', 'microbiologyevents_fk_subject_id');
 ALTER TABLE MICROBIOLOGYEVENTS
 ADD CONSTRAINT microbiologyevents_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE MICROBIOLOGYEVENTS DROP FOREIGN KEY microbiologyevents_fk_hadm_id;
+CALL tmp_drop_foreign_key('MICROBIOLOGYEVENTS', 'microbiologyevents_fk_hadm_id');
 ALTER TABLE MICROBIOLOGYEVENTS
 ADD CONSTRAINT microbiologyevents_fk_hadm_id
   FOREIGN KEY (HADM_ID)
@@ -318,21 +345,21 @@ ADD CONSTRAINT microbiologyevents_fk_hadm_id
 -- ------------
 
 -- subject_id
-ALTER TABLE NOTEEVENTS DROP FOREIGN KEY noteevents_fk_subject_id;
+CALL tmp_drop_foreign_key('NOTEEVENTS', 'noteevents_fk_subject_id');
 ALTER TABLE NOTEEVENTS
 ADD CONSTRAINT noteevents_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE NOTEEVENTS DROP FOREIGN KEY noteevents_fk_hadm_id;
+CALL tmp_drop_foreign_key('NOTEEVENTS', 'noteevents_fk_hadm_id');
 ALTER TABLE NOTEEVENTS
 ADD CONSTRAINT noteevents_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- cgid
-ALTER TABLE NOTEEVENTS DROP FOREIGN KEY noteevents_fk_cgid;
+CALL tmp_drop_foreign_key('NOTEEVENTS', 'noteevents_fk_cgid');
 ALTER TABLE NOTEEVENTS
 ADD CONSTRAINT noteevents_fk_cgid
   FOREIGN KEY (CGID)
@@ -343,28 +370,28 @@ ADD CONSTRAINT noteevents_fk_cgid
 -- ----------
 
 -- subject_id
-ALTER TABLE OUTPUTEVENTS DROP FOREIGN KEY outputevents_fk_subject_id;
+CALL tmp_drop_foreign_key('OUTPUTEVENTS', 'outputevents_fk_subject_id');
 ALTER TABLE OUTPUTEVENTS
 ADD CONSTRAINT outputevents_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE OUTPUTEVENTS DROP FOREIGN KEY outputevents_fk_hadm_id;
+CALL tmp_drop_foreign_key('OUTPUTEVENTS', 'outputevents_fk_hadm_id');
 ALTER TABLE OUTPUTEVENTS
 ADD CONSTRAINT outputevents_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- icustay_id
-ALTER TABLE OUTPUTEVENTS DROP FOREIGN KEY outputevents_fk_icustay_id;
+CALL tmp_drop_foreign_key('OUTPUTEVENTS', 'outputevents_fk_icustay_id');
 ALTER TABLE OUTPUTEVENTS
 ADD CONSTRAINT outputevents_fk_icustay_id
   FOREIGN KEY (ICUSTAY_ID)
   REFERENCES ICUSTAYS(ICUSTAY_ID);
 
 -- cgid
-ALTER TABLE OUTPUTEVENTS DROP FOREIGN KEY outputevents_fk_cgid;
+CALL tmp_drop_foreign_key('OUTPUTEVENTS', 'outputevents_fk_cgid');
 ALTER TABLE OUTPUTEVENTS
 ADD CONSTRAINT outputevents_fk_cgid
   FOREIGN KEY (CGID)
@@ -375,21 +402,21 @@ ADD CONSTRAINT outputevents_fk_cgid
 -- ---------------
 
 -- subject_id
-ALTER TABLE PRESCRIPTIONS DROP FOREIGN KEY prescriptions_fk_subject_id;
+CALL tmp_drop_foreign_key('PRESCRIPTIONS', 'prescriptions_fk_subject_id');
 ALTER TABLE PRESCRIPTIONS
 ADD CONSTRAINT prescriptions_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE PRESCRIPTIONS DROP FOREIGN KEY prescriptions_fk_hadm_id;
+CALL tmp_drop_foreign_key('PRESCRIPTIONS', 'prescriptions_fk_hadm_id');
 ALTER TABLE PRESCRIPTIONS
 ADD CONSTRAINT prescriptions_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- icustay_id
-ALTER TABLE PRESCRIPTIONS DROP FOREIGN KEY prescriptions_fk_icustay_id;
+CALL tmp_drop_foreign_key('PRESCRIPTIONS', 'prescriptions_fk_icustay_id');
 ALTER TABLE PRESCRIPTIONS
 ADD CONSTRAINT prescriptions_fk_icustay_id
   FOREIGN KEY (ICUSTAY_ID)
@@ -400,28 +427,28 @@ ADD CONSTRAINT prescriptions_fk_icustay_id
 -- ----------------
 
 -- subject_id
-ALTER TABLE PROCEDUREEVENTS_MV DROP FOREIGN KEY procedureevents_mv_fk_subject_id;
+CALL tmp_drop_foreign_key('PROCEDUREEVENTS_MV', 'procedureevents_mv_fk_subject_id');
 ALTER TABLE PROCEDUREEVENTS_MV
 ADD CONSTRAINT procedureevents_mv_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE PROCEDUREEVENTS_MV DROP FOREIGN KEY procedureevents_mv_fk_hadm_id;
+CALL tmp_drop_foreign_key('PROCEDUREEVENTS_MV', 'procedureevents_mv_fk_hadm_id');
 ALTER TABLE PROCEDUREEVENTS_MV
 ADD CONSTRAINT procedureevents_mv_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- itemid
-ALTER TABLE PROCEDUREEVENTS_MV DROP FOREIGN KEY procedureevents_mv_fk_icustay_id;
+CALL tmp_drop_foreign_key('PROCEDUREEVENTS_MV', 'procedureevents_mv_fk_icustay_id');
 ALTER TABLE PROCEDUREEVENTS_MV
 ADD CONSTRAINT procedureevents_mv_fk_icustay_id
   FOREIGN KEY (ICUSTAY_ID)
   REFERENCES ICUSTAYS(ICUSTAY_ID);
 
 -- cgid
-ALTER TABLE PROCEDUREEVENTS_MV DROP FOREIGN KEY procedureevents_mv_fk_cgid;
+CALL tmp_drop_foreign_key('PROCEDUREEVENTS_MV', 'procedureevents_mv_fk_cgid');
 ALTER TABLE PROCEDUREEVENTS_MV
 ADD CONSTRAINT procedureevents_mv_fk_cgid
   FOREIGN KEY (CGID)
@@ -432,14 +459,14 @@ ADD CONSTRAINT procedureevents_mv_fk_cgid
 -- ----------------
 
 -- subject_id
-ALTER TABLE PROCEDURES_ICD DROP FOREIGN KEY procedures_icd_fk_subject_id;
+CALL tmp_drop_foreign_key('PROCEDURES_ICD', 'procedures_icd_fk_subject_id');
 ALTER TABLE PROCEDURES_ICD
 ADD CONSTRAINT procedures_icd_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE PROCEDURES_ICD DROP FOREIGN KEY procedures_icd_fk_hadm_id;
+CALL tmp_drop_foreign_key('PROCEDURES_ICD', 'procedures_icd_fk_hadm_id');
 ALTER TABLE PROCEDURES_ICD
 ADD CONSTRAINT procedures_icd_fk_hadm_id
   FOREIGN KEY (HADM_ID)
@@ -448,7 +475,7 @@ ADD CONSTRAINT procedures_icd_fk_hadm_id
 -- ICD9_code
 -- Cannot impose this constraint because icd9_code contains 1238 codes not in c_icd_diagnoses
 -- See https://github.com/MIT-LCP/mimic-code/issues/20, by analogy
--- ALTER TABLE PROCEDURES_ICD DROP FOREIGN KEY procedures_icd_fk_icd9;
+-- CALL tmp_drop_foreign_key('PROCEDURES_ICD', 'procedures_icd_fk_icd9');
 -- ALTER TABLE PROCEDURES_ICD
 -- ADD CONSTRAINT procedures_icd_fk_icd9
 --   FOREIGN KEY (icd9_code)
@@ -459,14 +486,14 @@ ADD CONSTRAINT procedures_icd_fk_hadm_id
 -- ----------
 
 -- subject_id
-ALTER TABLE SERVICES DROP FOREIGN KEY services_fk_subject_id;
+CALL tmp_drop_foreign_key('SERVICES', 'services_fk_subject_id');
 ALTER TABLE SERVICES
 ADD CONSTRAINT services_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE SERVICES DROP FOREIGN KEY services_fk_hadm_id;
+CALL tmp_drop_foreign_key('SERVICES', 'services_fk_hadm_id');
 ALTER TABLE SERVICES
 ADD CONSTRAINT services_fk_hadm_id
   FOREIGN KEY (HADM_ID)
@@ -477,24 +504,26 @@ ADD CONSTRAINT services_fk_hadm_id
 -- -----------
 
 -- subject_id
-ALTER TABLE TRANSFERS DROP FOREIGN KEY transfers_fk_subject_id;
+CALL tmp_drop_foreign_key('TRANSFERS', 'transfers_fk_subject_id');
 ALTER TABLE TRANSFERS
 ADD CONSTRAINT transfers_fk_subject_id
   FOREIGN KEY (SUBJECT_ID)
   REFERENCES PATIENTS(SUBJECT_ID);
 
 -- hadm_id
-ALTER TABLE TRANSFERS DROP FOREIGN KEY transfers_fk_hadm_id;
+CALL tmp_drop_foreign_key('TRANSFERS', 'transfers_fk_hadm_id');
 ALTER TABLE TRANSFERS
 ADD CONSTRAINT transfers_fk_hadm_id
   FOREIGN KEY (HADM_ID)
   REFERENCES ADMISSIONS(HADM_ID);
 
 -- icustay_id
-ALTER TABLE TRANSFERS DROP FOREIGN KEY transfers_fk_icustay_id;
+CALL tmp_drop_foreign_key('TRANSFERS', 'transfers_fk_icustay_id');
 ALTER TABLE TRANSFERS
 ADD CONSTRAINT transfers_fk_icustay_id
   FOREIGN KEY (ICUSTAY_ID)
   REFERENCES ICUSTAYS(ICUSTAY_ID);
+
+DROP PROCEDURE tmp_drop_foreign_key;
   
 notee
